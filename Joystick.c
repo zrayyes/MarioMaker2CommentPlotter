@@ -251,7 +251,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         report_count++;
         break;
     case SHIFT_COLOR:
-        if (report_count > 50)
+        if (report_count > 25)
         {
             ChangeColorIndex();
             report_count = 0;
