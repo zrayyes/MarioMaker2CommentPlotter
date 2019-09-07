@@ -26,7 +26,7 @@ these buttons for our use.
 
 #include "Joystick.h"
 
-extern const uint8_t image_data[0x12c1] PROGMEM;
+extern const uint8_t image_data[0x3854] PROGMEM;
 
 // Main entry point.
 int main(void)
@@ -150,7 +150,7 @@ void HID_Task(void)
 typedef enum
 {
     SYNC_CONTROLLER,
-    READ_METADATA,
+    READ_IMAGE_HEADER,
     READY,
     SHIFT_COLOR,
     MOVE_DOWN,
@@ -168,6 +168,7 @@ short xpos = 0;
 short ypos = 0;
 int portsval = 0;
 
+short header_length = 19;
 short current_color = 16;
 short new_color = 1;
 // d = done; r = right; l = left;
@@ -213,9 +214,12 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
     // States and moves management
     switch (state)
     {
-    case READ_METADATA:
+    case READ_IMAGE_HEADER:
+        // setup header
         break;
     case READY:
+        new_color = pgm_read_byte(&(image_data[header_length + (xpos + (ypos * 320))])) & (15 << (((xpos + (ypos * 320)) % 2) * 4));
+
         if (new_color != current_color)
         {
             state = SHIFT_COLOR;
