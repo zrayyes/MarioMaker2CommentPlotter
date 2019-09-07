@@ -112,6 +112,7 @@ def to_c(pixel_arr, compressed=False):
     if len(COLORS) > 16:
         raise BaseException("Too many colors selected")
 
+    pixel_arr = pixel_arr[:(len(pixel_arr) // 10) * 5]
     # header
     array_length = 1
     # Number of colors to represent
@@ -121,7 +122,7 @@ def to_c(pixel_arr, compressed=False):
     # Number of pixels to represent > 320*180
     array_length += len(pixel_arr)//2
 
-    str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\nconst uint8_t image[%s] PROGMEM = {" % hex(
+    str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\nconst uint8_t image_data[%s] PROGMEM = {" % hex(
         array_length)
 
     str_out += "0x1" if compressed else "0x0"
