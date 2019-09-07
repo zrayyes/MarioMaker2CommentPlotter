@@ -169,7 +169,7 @@ short ypos = 0;
 int portsval = 0;
 
 short header_length = 19;
-short current_color = 16;
+short current_color = 12;
 short new_color = 1;
 // d = done; r = right; l = left;
 char shift_color = 'd';
@@ -218,7 +218,8 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         // setup header
         break;
     case READY:
-        new_color = pgm_read_byte(&(image_data[header_length + (xpos + (ypos * 320))])) & (15 << (((xpos + (ypos * 320)) % 2) * 4));
+        ReportData->Button |= SWITCH_A;
+        new_color = pgm_read_byte(&(image_data[header_length + (ypos + (xpos * 320)) / 2])) & (15 << ((((ypos + (xpos * 320)) / 2) % 2) * 4));
 
         if (new_color != current_color)
         {
@@ -234,6 +235,21 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         else
         {
+            if (ypos < 320)
+            {
+                state = MOVE_DOWN;
+            }
+            else
+            {
+                if (xpos < 90)
+                {
+                    state = CR;
+                }
+                else
+                {
+                    state = DONE;
+                }
+            }
             state = DONE;
         }
         report_count++;
@@ -268,8 +284,31 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         report_count++;
         break;
     case MOVE_DOWN:
+        if (report_count > 50)
+        {
+            report_count = 0;
+            ypos += 1;
+            state = READY;
+        }
+        else if (report_count > 25)
+        {
+            ReportData->HAT = HAT_BOTTOM;
+        }
+        report_count++;
         break;
     case CR:
+        if (report_count > 125)
+        {
+            report_count = 0;
+            xpos += 1;
+            ypos = 0;
+            state = READY;
+        }
+        else if (report_count > 25)
+        {
+            ReportData->LY = STICK_MAX;
+        }
+        report_count++;
         break;
     case DONE:
 #ifdef ALERT_WHEN_DONE
