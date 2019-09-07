@@ -185,9 +185,9 @@ void ChangeColorIndex(void)
     }
     else
     {
-        current_color += (shift_color == 'r') ? -1 : 1;
+        current_color += (shift_color == 'r') ? 1 : -1;
     }
-    shift_color = 'd';
+    shift_color = (current_color == new_color) ? 'd' : shift_color;
 }
 
 // Prepare the next report for the host.
@@ -216,36 +216,26 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
     case READ_METADATA:
         break;
     case READY:
-        if (report_count > 25)
+        if (new_color != current_color)
         {
-            if (new_color != current_color)
+            state = SHIFT_COLOR;
+            if (((new_color + 17) - current_color) < (current_color - new_color))
             {
-                state = SHIFT_COLOR;
-                if (((new_color + 17) - current_color) < (current_color - new_color))
-                {
-                    shift_color = 'r';
-                }
-                else
-                {
-                    shift_color = 'l';
-                }
+                shift_color = 'r';
             }
             else
             {
-                if (new_color == 17)
-                {
-                    new_color = 1;
-                }
-                else
-                {
-                    new_color += 1;
-                }
+                shift_color = 'l';
             }
+        }
+        else
+        {
+            state = DONE;
         }
         report_count++;
         break;
     case SYNC_CONTROLLER:
-        if (report_count > 100)
+        if (report_count > 125)
         {
             report_count = 0;
             state = READY;
@@ -254,7 +244,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         {
             ReportData->Button |= SWITCH_L | SWITCH_R;
         }
-        else if (report_count == 75 || report_count == 100)
+        else if (report_count == 100 || report_count == 125)
         {
             ReportData->Button |= SWITCH_A;
         }
@@ -265,9 +255,9 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         {
             ChangeColorIndex();
             report_count = 0;
-            state = READY;
+            state = (shift_color == 'd') ? READY : SHIFT_COLOR;
         }
-        else if (report_count == 25 || report_count == 50)
+        else if (report_count == 25)
         {
             ReportData->Button |= (shift_color == 'r') ? SWITCH_ZR : SWITCH_ZL;
         }
