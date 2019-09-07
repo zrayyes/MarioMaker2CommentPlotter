@@ -223,11 +223,11 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
                 state = SHIFT_COLOR;
                 if (((new_color + 17) - current_color) < (current_color - new_color))
                 {
-                    shift_color = 'l';
+                    shift_color = 'r';
                 }
                 else
                 {
-                    shift_color = 'r';
+                    shift_color = 'l';
                 }
             }
             else
