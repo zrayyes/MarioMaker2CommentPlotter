@@ -36,6 +36,7 @@ int main(void)
     // We'll then enable global interrupts for our use.
     GlobalInterruptEnable();
     // Once that's done, we'll enter an infinite loop.
+    ReadHeader();
     for (;;)
     {
         // We need to run our task to process and deliver data for our IN and OUT endpoints.
@@ -169,6 +170,7 @@ short xpos = 0;
 short ypos = 0;
 int portsval = 0;
 
+uint8_t colors_used[16] = {0};
 short header_length = 19;
 uint8_t current_color = 12;
 uint8_t new_color = 1;
@@ -190,6 +192,31 @@ void ChangeColorIndex(void)
         current_color += (shift_color == 'r') ? 1 : -1;
     }
     shift_color = (current_color == new_color) ? 'd' : shift_color;
+}
+
+void ReadHeader(void)
+{
+    // First byte = 1 if compressed else 0
+    // EMPTY LINE = 0xFF
+    // ...COLORS, 1 byte each
+    // EMPTY LINE = 0xFF
+    uint8_t color_count = 0;
+    bool stop = false;
+    uint8_t temp = 0;
+    while (!stop)
+    {
+        temp = pgm_read_byte(&(image_data[color_count + 2]));
+        if (temp == 0xff)
+        {
+            stop = true;
+        }
+        else
+        {
+            colors_used[color_count] = temp;
+            color_count++;
+        }
+    }
+    header_length = color_count + 1;
 }
 
 // Prepare the next report for the host.
@@ -215,9 +242,6 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
     // States and moves management
     switch (state)
     {
-    case READ_IMAGE_HEADER:
-        // setup header
-        break;
     case READY:
         ReportData->Button |= SWITCH_A;
         new_color = pgm_read_byte(&(image_data[header_length + (ypos + (xpos * 320)) / 2])) & (15 << ((((ypos + (xpos * 320)) / 2) % 2) * 4));
