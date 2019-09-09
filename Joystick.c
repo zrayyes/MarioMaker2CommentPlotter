@@ -170,8 +170,8 @@ short ypos = 0;
 int portsval = 0;
 
 short header_length = 19;
-short current_color = 12;
-short new_color = 1;
+uint8_t current_color = 12;
+uint8_t new_color = 1;
 // d = done; r = right; l = left;
 char shift_color = 'd';
 
@@ -251,7 +251,6 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
                     state = DONE;
                 }
             }
-            state = DONE;
         }
         report_count++;
         break;
@@ -291,7 +290,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
             ypos += 1;
             state = READY;
         }
-        else
+        else if (report_count == 25)
         {
             ReportData->HAT = HAT_BOTTOM;
         }
@@ -304,7 +303,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
             xpos += 1;
             state = READY;
         }
-        else
+        else if (report_count == 25)
         {
             ReportData->HAT = HAT_RIGHT;
         }
