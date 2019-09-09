@@ -108,24 +108,23 @@ def compress(pixel_arr):
     return temp
 
 
-def to_c(pixel_arr, compressed=False):
+def to_c(pixel_arr, half=1):
     if len(COLORS) > 16:
         raise BaseException("Too many colors selected")
 
-    pixel_arr = pixel_arr[:(len(pixel_arr) // 10) * 5]
+    half_len = len(pixel_arr) // 2
+    pixel_arr = pixel_arr[:half_len] if half == 1 else pixel_arr[half_len:]
+
     # header
-    array_length = 1
-    # Number of colors to represent
-    array_length += len(COLORS)
-    # 3 blank lines 0xFF
-    array_length += 3
-    # Number of pixels to represent > 320*180
-    array_length += len(pixel_arr)//2
+    array_length = 1 + len(COLORS) + 3
+
+    # Each pixel uses half a byte
+    array_length += half_len // 2
 
     str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\nconst uint8_t image_data[%s] PROGMEM = {" % hex(
         array_length)
 
-    str_out += "0x1" if compressed else "0x0"
+    str_out += "0x0"
     str_out += ","
     str_out += "0xFF,"
     for code, color in COLORS:
@@ -191,12 +190,6 @@ if __name__ == "__main__":
 
     uncompressed = my_img.get_pixel_array()
     uncompressed_size = (320*180)/2
-
-    # compressed = compress(uncompressed)
-    # compressed_size = len(compressed)/2
-
-    # rle = True
-    # my_img.image = uncompress(compressed, my_img.image)
 
     to_c(uncompressed)
 
