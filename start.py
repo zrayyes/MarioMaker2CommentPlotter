@@ -90,21 +90,24 @@ class MyImage(object):
                 for y in range(self.image.height)])
 
 
-def compress(pixel_arr):
+def compress_n(pixel_arr, n=1):
     temp = []
-    counter = 1
-    current = None
-    for i in pixel_arr:
+    repetition = 1
+    held_pixels = None
+    for d in range(0, len(pixel_arr), n):
+        pixels = pixel_arr[d:d+n]
         if not temp:
-            temp.append(i)
-        elif (current is not i) or (counter == 15):
-            temp.append(counter)
-            temp.append(i)
-            current = i
-            counter = 1
+            temp.extend(pixels)
+            held_pixels = pixels
+        elif (held_pixels != pixels) or (repetition == 15):
+            temp.append(repetition)
+            temp.extend(pixels)
+            held_pixels = pixels
+            repetition = 1
         else:
-            counter += 1
-    temp.append(current)
+            repetition += 1
+    # temp.extend(held_pixels)
+    temp.append(repetition)
     return temp
 
 
@@ -186,11 +189,20 @@ if __name__ == "__main__":
     my_img = MyImage(sys.argv[1])
     my_img.quantize(len(sys.argv) > 2)
 
-    rle = False
+    raw = my_img.get_pixel_array()
+    raw_size = (320*180)//2
 
-    uncompressed = my_img.get_pixel_array()
-    uncompressed_size = (320*180)/2
+    lowest_n = 0
+    lowest_size = 0xffff
+    for n in range(1, 500, 2):
+        size = len(compress_n(raw, n))//2
+        if size < lowest_size:
+            lowest_size = size
+            lowest_n = n
+        print("%d: %d" % (n, size))
 
-    to_c(uncompressed)
+    print("lowest at %d : %d | %d" % (lowest_n, lowest_size, raw_size))
 
-    my_img.save("preview.png")
+    # to_c(raw)
+
+    # my_img.save("preview.png")
