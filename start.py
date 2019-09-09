@@ -33,11 +33,6 @@ def hex_to_rgb(hex):
 
 
 def get_color_from_list(n):
-    if n == 255:
-        return (255, 255, 255)
-    if n == 0:
-        return (0, 0, 0)
-
     return hex_to_rgb(COLORS[n][1])
 
 
@@ -184,6 +179,18 @@ def uncompress(pixel_arr, img, size=1):
     return new_img
 
 
+def create_img_from_array(pixel_arr, img):
+    w = img.width
+    h = img.height
+    new_img = copy.copy(img)
+
+    for row in range(w):
+        for col in range(h):
+            new_img.putpixel(
+                (row, col), get_color_from_list(pixel_arr[(row*180) + col]))
+    return new_img
+
+
 if __name__ == "__main__":
     # TODO: Add two-color option option
     my_img = MyImage(sys.argv[1])
@@ -192,17 +199,19 @@ if __name__ == "__main__":
     raw = my_img.get_pixel_array()
     raw_size = (320*180)//2
 
-    lowest_n = 0
-    lowest_size = 0xffff
-    for n in range(1, 500, 2):
-        size = len(compress_n(raw, n))//2
-        if size < lowest_size:
-            lowest_size = size
-            lowest_n = n
-        print("%d: %d" % (n, size))
+    # lowest_n = 0
+    # lowest_size = 0xffff
+    # for n in range(1, 500, 2):
+    #     size = len(compress_n(raw, n))//2
+    #     if size < lowest_size:
+    #         lowest_size = size
+    #         lowest_n = n
+    #     print("%d: %d" % (n, size))
 
-    print("lowest at %d : %d | %d" % (lowest_n, lowest_size, raw_size))
+    # print("lowest at %d : %d | %d" % (lowest_n, lowest_size, raw_size))
 
     # to_c(raw)
+    new_img = create_img_from_array(raw, my_img.image)
 
-    # my_img.save("preview.png")
+    new_img.save("new.png")
+    my_img.save("preview.png")
