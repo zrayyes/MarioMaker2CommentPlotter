@@ -153,6 +153,7 @@ typedef enum
     READ_IMAGE_HEADER,
     READY,
     SHIFT_COLOR,
+    MOVE_RIGHT,
     MOVE_DOWN,
     CR,
     DONE
@@ -284,15 +285,28 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         report_count++;
         break;
     case MOVE_DOWN:
-        if (report_count > 50)
+        if (report_count > 25)
         {
             report_count = 0;
             ypos += 1;
             state = READY;
         }
-        else if (report_count > 25)
+        else
         {
             ReportData->HAT = HAT_BOTTOM;
+        }
+        report_count++;
+        break;
+    case MOVE_RIGHT:
+        if (report_count > 25)
+        {
+            report_count = 0;
+            xpos += 1;
+            state = READY;
+        }
+        else
+        {
+            ReportData->HAT = HAT_RIGHT;
         }
         report_count++;
         break;
@@ -300,9 +314,8 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         if (report_count > 125)
         {
             report_count = 0;
-            xpos += 1;
             ypos = 0;
-            state = READY;
+            state = MOVE_RIGHT;
         }
         else if (report_count > 25)
         {
