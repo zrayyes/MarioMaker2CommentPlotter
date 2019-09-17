@@ -199,19 +199,6 @@ if __name__ == "__main__":
     raw = my_img.get_pixel_array()
     raw_size = (320*180)//2
 
-    # lowest_n = 0
-    # lowest_size = 0xffff
-    # for n in range(1, 500, 2):
-    #     size = len(compress_n(raw, n))//2
-    #     if size < lowest_size:
-    #         lowest_size = size
-    #         lowest_n = n
-    #     print("%d: %d" % (n, size))
+    to_c(raw)
 
-    # print("lowest at %d : %d | %d" % (lowest_n, lowest_size, raw_size))
-
-    # to_c(raw)
-    new_img = create_img_from_array(raw, my_img.image)
-
-    new_img.save("new.png")
     my_img.save("preview.png")

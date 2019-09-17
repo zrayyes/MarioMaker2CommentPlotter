@@ -36,7 +36,7 @@ int main(void)
     // We'll then enable global interrupts for our use.
     GlobalInterruptEnable();
     // Once that's done, we'll enter an infinite loop.
-    ReadHeader();
+    // ReadHeader();
     for (;;)
     {
         // We need to run our task to process and deliver data for our IN and OUT endpoints.
@@ -170,10 +170,11 @@ short xpos = 0;
 short ypos = 0;
 int portsval = 0;
 
-uint8_t colors_used[16] = {0};
+uint8_t colors_used[16] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0x10, 0x11};
 short header_length = 19;
-uint8_t current_color = 12;
+uint8_t current_color = 16;
 uint8_t new_color = 1;
+uint8_t index = 0;
 // d = done; r = right; l = left;
 char shift_color = 'd';
 
@@ -181,9 +182,9 @@ void ChangeColorIndex(void)
 {
     if ((current_color == 17) && (shift_color == 'r'))
     {
-        current_color = 0;
+        current_color = 1;
     }
-    else if ((current_color == 0) && (shift_color == 'l'))
+    else if ((current_color == 1) && (shift_color == 'l'))
     {
         current_color = 17;
     }
@@ -243,8 +244,11 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
     switch (state)
     {
     case READY:
-        ReportData->Button |= SWITCH_A;
-        new_color = pgm_read_byte(&(image_data[header_length + (ypos + (xpos * 320)) / 2])) & (15 << ((((ypos + (xpos * 320)) / 2) % 2) * 4));
+        index = pgm_read_byte(&(image_data[header_length + (ypos + (xpos * 320)) / 2])) & (15 << (((ypos + (xpos * 320)) % 2) * 4));
+        if (index > 15){
+            index = index >> 4;
+        }
+        new_color = colors_used[index];
 
         if (new_color != current_color)
         {
@@ -356,10 +360,8 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         return;
     }
 
-    // // Inking
-    // if (state != SYNC_CONTROLLER)
-    // 	if (pgm_read_byte(&(image_data[(xpos / 8) + (ypos * 40)])) & 1 << (xpos % 8))
-    // 		ReportData->Button |= SWITCH_A;
+    if (state != SYNC_CONTROLLER)
+        ReportData->Button |= SWITCH_A;
 
     // Prepare to echo this report
     memcpy(&last_report, ReportData, sizeof(USB_JoystickReport_Input_t));
