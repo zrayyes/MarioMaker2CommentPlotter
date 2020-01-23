@@ -106,18 +106,15 @@ def compress_n(pixel_arr, n=1):
     return temp
 
 
-def to_c(pixel_arr, half=1):
+def to_c(pixel_arr):
     if len(COLORS) > 16:
         raise BaseException("Too many colors selected")
-
-    half_len = len(pixel_arr) // 2
-    pixel_arr = pixel_arr[:half_len] if half == 1 else pixel_arr[half_len:]
 
     # header
     array_length = 1 + len(COLORS) + 3
 
     # Each pixel uses half a byte
-    array_length += half_len // 2
+    array_length += len(pixel_arr) // 2
 
     str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\nconst uint8_t image_data[%s] PROGMEM = {" % hex(
         array_length)

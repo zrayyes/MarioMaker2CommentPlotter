@@ -26,7 +26,7 @@ these buttons for our use.
 
 #include "Joystick.h"
 
-extern const uint8_t image_data[0x3854] PROGMEM;
+extern const uint8_t image_data[0x7094] PROGMEM;
 
 // Main entry point.
 int main(void)
@@ -151,12 +151,11 @@ void HID_Task(void)
 typedef enum
 {
     SYNC_CONTROLLER,
-    READ_IMAGE_HEADER,
     READY,
     SHIFT_COLOR,
     MOVE_RIGHT,
     MOVE_DOWN,
-    CR,
+    MOVE_COLUMN,
     DONE
 } State_t;
 State_t state = SYNC_CONTROLLER;
@@ -272,7 +271,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
             {
                 if (xpos < 90)
                 {
-                    state = CR;
+                    state = MOVE_COLUMN;
                 }
                 else
                 {
@@ -337,7 +336,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         report_count++;
         break;
-    case CR:
+    case MOVE_COLUMN:
         if (report_count > 125)
         {
             report_count = 0;
