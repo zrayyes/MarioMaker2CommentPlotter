@@ -156,6 +156,7 @@ typedef enum
     MOVE_RIGHT,
     MOVE_DOWN,
     MOVE_COLUMN,
+    PAINT,
     DONE
 } State_t;
 State_t state = SYNC_CONTROLLER;
@@ -167,8 +168,10 @@ USB_JoystickReport_Input_t last_report;
 int report_count = 0;
 short xpos = 0;
 short ypos = 0;
+bool paint_done = false;
 int portsval = 0;
 
+// TODO: SWITCH TO READING ACTUAL HEADER
 uint8_t colors_used[16] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0x10, 0x11};
 short header_length = 19;
 uint8_t current_color = 16;
@@ -243,42 +246,53 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
     switch (state)
     {
     case READY:
+
+        // TODO: MAKE READABLE
         index = pgm_read_byte(&(image_data[header_length + (ypos + (xpos * 320)) / 2])) & (15 << (((ypos + (xpos * 320)) % 2) * 4));
-        if (index > 15){
+        if (index > 15)
+        {
             index = index >> 4;
         }
         new_color = colors_used[index];
 
-        if (new_color != current_color)
+        if (!paint_done)
         {
-            state = SHIFT_COLOR;
-            if (((new_color + 17) - current_color) < (current_color - new_color))
-            {
-                shift_color = 'r';
-            }
-            else
-            {
-                shift_color = 'l';
-            }
+            state = PAINT;
         }
         else
         {
-            if (ypos < 320)
+            if (new_color != current_color)
             {
-                state = MOVE_DOWN;
-            }
-            else
-            {
-                if (xpos < 90)
+                state = SHIFT_COLOR;
+                if (((new_color + 17) - current_color) < (current_color - new_color))
                 {
-                    state = MOVE_COLUMN;
+                    shift_color = 'r';
                 }
                 else
                 {
-                    state = DONE;
+                    shift_color = 'l';
+                }
+            }
+            else
+            {
+                if (ypos < 320)
+                {
+                    state = MOVE_DOWN;
+                }
+                else
+                {
+                    if (xpos < 90)
+                    {
+                        state = MOVE_COLUMN;
+                    }
+                    else
+                    {
+                        state = DONE;
+                    }
                 }
             }
         }
+
         report_count++;
         break;
     case SYNC_CONTROLLER:
@@ -315,6 +329,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         {
             report_count = 0;
             ypos += 1;
+            paint_done = false;
             state = READY;
         }
         else if (report_count == 25)
@@ -328,6 +343,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         {
             report_count = 0;
             xpos += 1;
+            paint_done = false;
             state = READY;
         }
         else if (report_count == 25)
@@ -349,18 +365,24 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         report_count++;
         break;
+    case PAINT:
+        if (report_count == 25)
+        {
+            ReportData->Button = SWITCH_A;
+        }
+        else if (report_count > 25)
+        {
+            paint_done = true;
+            state = READY;
+        }
+        report_count++;
+        break;
     case DONE:
-#ifdef ALERT_WHEN_DONE
-        portsval = ~portsval;
-        PORTD = portsval; //flash LED(s) and sound buzzer if attached
-        PORTB = portsval;
-        _delay_ms(250);
-#endif
         return;
     }
 
-    if (state != SYNC_CONTROLLER)
-        ReportData->Button |= SWITCH_A;
+    // if (state != SYNC_CONTROLLER)
+    //     ReportData->Button |= SWITCH_A;
 
     // Prepare to echo this report
     memcpy(&last_report, ReportData, sizeof(USB_JoystickReport_Input_t));
