@@ -151,6 +151,7 @@ void HID_Task(void)
 typedef enum
 {
     SYNC_CONTROLLER,
+    CLEAN_SCREEN,
     READY,
     SHIFT_COLOR,
     MOVE_RIGHT,
@@ -245,6 +246,43 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
     // States and moves management
     switch (state)
     {
+    case SYNC_CONTROLLER:
+        if (report_count > 125)
+        {
+            report_count = 0;
+            state = CLEAN_SCREEN;
+        }
+        else if (report_count == 25 || report_count == 50)
+        {
+            ReportData->Button |= SWITCH_L | SWITCH_R;
+        }
+        else if (report_count == 100 || report_count == 125)
+        {
+            ReportData->Button |= SWITCH_A;
+        }
+        report_count++;
+        break;
+    case CLEAN_SCREEN:
+        if (report_count == 25)
+        {
+            ReportData->Button |= SWITCH_MINUS;
+        }
+        else if (report_count > 25 && report_count < (25 + 150))
+        {
+            ReportData->LY = STICK_MIN;
+        }
+        else if (report_count > (25 + 150) && report_count < 25 + (150 * 2))
+        {
+            ReportData->LX = STICK_MIN;
+        }
+        else if (report_count > 25 + (150 * 2))
+        {
+            report_count = 0;
+            state = READY;
+        }
+
+        report_count++;
+        break;
     case READY:
 
         // TODO: MAKE READABLE
@@ -293,22 +331,6 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
             }
         }
 
-        report_count++;
-        break;
-    case SYNC_CONTROLLER:
-        if (report_count > 125)
-        {
-            report_count = 0;
-            state = READY;
-        }
-        else if (report_count == 25 || report_count == 50)
-        {
-            ReportData->Button |= SWITCH_L | SWITCH_R;
-        }
-        else if (report_count == 100 || report_count == 125)
-        {
-            ReportData->Button |= SWITCH_A;
-        }
         report_count++;
         break;
     case SHIFT_COLOR:
@@ -361,7 +383,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         else if (report_count > 25)
         {
-            ReportData->LY = STICK_MAX;
+            ReportData->LY = STICK_MIN;
         }
         report_count++;
         break;
