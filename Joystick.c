@@ -152,6 +152,7 @@ typedef enum
 {
     SYNC_CONTROLLER,
     CLEAN_SCREEN,
+    READ_HEADER,
     READY,
     SHIFT_COLOR,
     MOVE_RIGHT,
@@ -172,14 +173,49 @@ short ypos = 0;
 bool paint_done = false;
 int portsval = 0;
 
-// TODO: SWITCH TO READING ACTUAL HEADER
-uint8_t colors_used[16] = {0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0x10, 0x11};
-short header_length = 19;
+uint8_t colors_used[19] = {};
+short header_length;
+
 uint8_t current_color = 16;
 uint8_t new_color = 1;
 uint8_t index = 0;
 // d = done; r = right; l = left;
 char shift_color = 'd';
+
+uint8_t ReadBitFromImage(uint8_t index)
+{
+    return pgm_read_byte(&(image_data[index]));
+}
+
+uint8_t ReadNextBitFromImage(void)
+{
+    return ReadBitFromImage(header_length + (ypos + (xpos * 320)) / 2) & (15 << (((ypos + (xpos * 320)) % 2) * 4));
+}
+
+void ReadHeader(void)
+{
+    // First byte = 1 if compressed else 0
+    // EMPTY LINE = 0xFF
+    // ...COLORS, 1 byte each
+    // EMPTY LINE = 0xFF
+    uint8_t color_count = 0;
+    bool stop = false;
+    uint8_t temp = 0;
+    while (!stop)
+    {
+        temp = ReadBitFromImage(color_count + 2);
+        if (temp == 0xff)
+        {
+            stop = true;
+        }
+        else
+        {
+            colors_used[color_count] = temp;
+            color_count++;
+        }
+    }
+    header_length = color_count + 1;
+}
 
 void ChangeColorIndex(void)
 {
@@ -196,31 +232,6 @@ void ChangeColorIndex(void)
         current_color += (shift_color == 'r') ? 1 : -1;
     }
     shift_color = (current_color == new_color) ? 'd' : shift_color;
-}
-
-void ReadHeader(void)
-{
-    // First byte = 1 if compressed else 0
-    // EMPTY LINE = 0xFF
-    // ...COLORS, 1 byte each
-    // EMPTY LINE = 0xFF
-    uint8_t color_count = 0;
-    bool stop = false;
-    uint8_t temp = 0;
-    while (!stop)
-    {
-        temp = pgm_read_byte(&(image_data[color_count + 2]));
-        if (temp == 0xff)
-        {
-            stop = true;
-        }
-        else
-        {
-            colors_used[color_count] = temp;
-            color_count++;
-        }
-    }
-    header_length = color_count + 1;
 }
 
 // Prepare the next report for the host.
@@ -278,15 +289,18 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         else if (report_count > 25 + (150 * 2))
         {
             report_count = 0;
-            state = READY;
+            state = READ_HEADER;
         }
 
         report_count++;
         break;
+    case READ_HEADER:
+        ReadHeader();
+        state = READY;
+        break;
     case READY:
 
-        // TODO: MAKE READABLE
-        index = pgm_read_byte(&(image_data[header_length + (ypos + (xpos * 320)) / 2])) & (15 << (((ypos + (xpos * 320)) % 2) * 4));
+        index = ReadNextBitFromImage();
         if (index > 15)
         {
             index = index >> 4;
