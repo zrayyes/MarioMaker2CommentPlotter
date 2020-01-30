@@ -214,7 +214,7 @@ void ReadHeader(void)
             color_count++;
         }
     }
-    header_length = color_count + 1;
+    header_length = 2 + color_count + 1;
 }
 
 void ChangeColorIndex(void)
@@ -307,40 +307,37 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         new_color = colors_used[index];
 
-        if (!paint_done)
+        if (new_color != current_color)
+        {
+            state = SHIFT_COLOR;
+            if (((new_color + 17) - current_color) < (current_color - new_color))
+            {
+                shift_color = 'r';
+            }
+            else
+            {
+                shift_color = 'l';
+            }
+        }
+        else if (paint_done == false)
         {
             state = PAINT;
         }
         else
         {
-            if (new_color != current_color)
+            if (ypos < 320)
             {
-                state = SHIFT_COLOR;
-                if (((new_color + 17) - current_color) < (current_color - new_color))
-                {
-                    shift_color = 'r';
-                }
-                else
-                {
-                    shift_color = 'l';
-                }
+                state = MOVE_DOWN;
             }
             else
             {
-                if (ypos < 320)
+                if (xpos < 90)
                 {
-                    state = MOVE_DOWN;
+                    state = MOVE_COLUMN;
                 }
                 else
                 {
-                    if (xpos < 90)
-                    {
-                        state = MOVE_COLUMN;
-                    }
-                    else
-                    {
-                        state = DONE;
-                    }
+                    state = DONE;
                 }
             }
         }
