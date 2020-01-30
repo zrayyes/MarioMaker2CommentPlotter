@@ -121,6 +121,7 @@ void ChangeColorIndex(void);
 void ReadHeader(void);
 uint8_t ReadBitFromImage(uint8_t index);
 uint8_t ReadNextBitFromImage(void);
+bool MoveColorRight(void);
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t* const ReportData);
 

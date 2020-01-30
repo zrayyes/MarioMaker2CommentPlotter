@@ -234,6 +234,15 @@ void ChangeColorIndex(void)
     shift_color = (current_color == new_color) ? 'd' : shift_color;
 }
 
+bool MoveColorRight(void)
+{
+    short steps = new_color - current_color;
+    // Move Right IF: 
+    // - Positive and under 9 steps
+    // - Negative and over 9 steps
+    return (((steps>0)&&(steps<9)) || ((steps<0)&&(steps<-9)));
+}
+
 // Prepare the next report for the host.
 void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
 {
@@ -299,7 +308,6 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         state = READY;
         break;
     case READY:
-
         index = ReadNextBitFromImage();
         if (index > 15)
         {
@@ -310,14 +318,6 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         if (new_color != current_color)
         {
             state = SHIFT_COLOR;
-            if (((new_color + 17) - current_color) < (current_color - new_color))
-            {
-                shift_color = 'r';
-            }
-            else
-            {
-                shift_color = 'l';
-            }
         }
         else if (paint_done == false)
         {
@@ -353,6 +353,14 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         else if (report_count == 25)
         {
+            if (MoveColorRight())
+            {
+                shift_color = 'r';
+            }
+            else 
+            {
+                shift_color = 'l';
+            }
             ReportData->Button |= (shift_color == 'r') ? SWITCH_ZR : SWITCH_ZL;
         }
         report_count++;
@@ -405,6 +413,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         else if (report_count > 25)
         {
+            report_count = 0;
             paint_done = true;
             state = READY;
         }
