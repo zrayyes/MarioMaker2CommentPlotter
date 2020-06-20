@@ -174,17 +174,18 @@ bool paint_done = false;
 int portsval = 0;
 
 uint8_t colors_used[19] = {};
+uint8_t color_index = 0;
+
 short header_length;
 
 uint8_t current_color = 16;
 uint8_t new_color = 1;
-uint8_t index = 0;
 // d = done; r = right; l = left;
 char shift_color = 'd';
 
-uint8_t ReadBitFromImage(uint8_t index)
+uint8_t ReadBitFromImage(uint8_t idx)
 {
-    return pgm_read_byte(&(image_data[index]));
+    return pgm_read_byte(&(image_data[idx]));
 }
 
 uint8_t ReadNextBitFromImage(void)
@@ -237,10 +238,10 @@ void ChangeColorIndex(void)
 bool MoveColorRight(void)
 {
     short steps = new_color - current_color;
-    // Move Right IF: 
+    // Move Right IF:
     // - Positive and under 9 steps
     // - Negative and over 9 steps
-    return (((steps>0)&&(steps<9)) || ((steps<0)&&(steps<-9)));
+    return (((steps > 0) && (steps < 9)) || ((steps < 0) && (steps < -9)));
 }
 
 // Prepare the next report for the host.
@@ -308,21 +309,24 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         state = READY;
         break;
     case READY:
-        index = ReadNextBitFromImage();
-        if (index > 15)
+        color_index = ReadNextBitFromImage();
+        if (color_index > 15)
         {
-            index = index >> 4;
+            color_index = color_index >> 4;
         }
-        new_color = colors_used[index];
+        new_color = colors_used[color_index];
 
+        // Check if color needs changing
         if (new_color != current_color)
         {
             state = SHIFT_COLOR;
         }
+        // Check if a print has been done
         else if (paint_done == false)
         {
             state = PAINT;
         }
+        // Move
         else
         {
             if (ypos < 320)
@@ -357,7 +361,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
             {
                 shift_color = 'r';
             }
-            else 
+            else
             {
                 shift_color = 'l';
             }
