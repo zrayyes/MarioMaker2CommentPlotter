@@ -1,4 +1,5 @@
 import sys
+import re
 import copy
 from PIL import Image
 
@@ -148,6 +149,16 @@ def to_c(pixel_arr):
 
     with open("image.c", "w") as f:
         f.write(str_out)
+
+    # Replace Array size in Joystick.c
+    with open('Joystick.c', 'r') as file:
+        filedata = file.read()
+
+    filedata = re.sub(
+        r'(?<=image_data\[)(.*)(?=\] PROGMEM)', hex(array_length), filedata)
+
+    with open('Joystick.c', 'w') as file:
+        file.write(filedata)
 
 
 def uncompress(pixel_arr, img, size=1):
