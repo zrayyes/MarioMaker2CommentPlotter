@@ -131,7 +131,9 @@ def to_c(pixel_arr):
     # Half bytes
     left_half = None
     right_half = None
-    for pixel in pixel_arr:
+    for count,pixel in enumerate(pixel_arr,0):
+        if (count%180) == 0:
+            str_out += "\n//Col#%s\n" % (count//180 +1)
         if left_half is None:
             left_half = pixel
         elif right_half is None:
