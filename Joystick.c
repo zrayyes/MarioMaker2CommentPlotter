@@ -171,7 +171,6 @@ int report_count = 0;
 short xpos = 0;
 short ypos = 0;
 bool paint_done = false;
-int portsval = 0;
 
 uint8_t colors_used[19] = {};
 uint8_t color_index = 0;
@@ -190,7 +189,16 @@ uint8_t ReadBitFromImage(uint8_t idx)
 
 uint8_t ReadNextBitFromImage(void)
 {
-    return ReadBitFromImage(header_length + (ypos + (xpos * 320)) / 2) & (15 << (((ypos + (xpos * 320)) % 2) * 4));
+    // Get First half 00001111
+    if ((ypos + (xpos * 180)) % 2)
+    {
+        return ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF;
+    }
+    // Get Second half 11110000
+    else
+    {
+        return ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF0;
+    }
 }
 
 void ReadHeader(void)
@@ -316,26 +324,26 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         }
         new_color = colors_used[color_index];
 
-        // Check if color needs changing
         if (new_color != current_color)
         {
             state = SHIFT_COLOR;
         }
-        // Check if a print has been done
         else if (paint_done == false)
         {
+            paint_done = true;
             state = PAINT;
         }
         // Move
         else
         {
-            if (ypos < 320)
+            paint_done = false;
+            if (ypos < 179)
             {
                 state = MOVE_DOWN;
             }
             else
             {
-                if (xpos < 90)
+                if (xpos < 319)
                 {
                     state = MOVE_COLUMN;
                 }
@@ -345,17 +353,16 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
                 }
             }
         }
-
         report_count++;
         break;
     case SHIFT_COLOR:
-        if (report_count > 25)
+        if (report_count > 15)
         {
             ChangeColorIndex();
             report_count = 0;
             state = (shift_color == 'd') ? READY : SHIFT_COLOR;
         }
-        else if (report_count == 25)
+        else if (report_count == 15)
         {
             if (MoveColorRight())
             {
@@ -370,14 +377,13 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         report_count++;
         break;
     case MOVE_DOWN:
-        if (report_count > 25)
+        if (report_count > 15)
         {
             report_count = 0;
             ypos += 1;
-            paint_done = false;
             state = READY;
         }
-        else if (report_count == 25)
+        else if (report_count == 15)
         {
             ReportData->HAT = HAT_BOTTOM;
         }
@@ -388,7 +394,6 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         {
             report_count = 0;
             xpos += 1;
-            paint_done = false;
             state = READY;
         }
         else if (report_count == 25)
@@ -411,14 +416,13 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         report_count++;
         break;
     case PAINT:
-        if (report_count == 25)
+        if (report_count == 15)
         {
             ReportData->Button = SWITCH_A;
         }
-        else if (report_count > 25)
+        else if (report_count > 15)
         {
             report_count = 0;
-            paint_done = true;
             state = READY;
         }
         report_count++;
