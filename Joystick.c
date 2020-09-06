@@ -182,7 +182,7 @@ uint8_t new_color = 1;
 // d = done; r = right; l = left;
 char shift_color = 'd';
 
-uint8_t ReadBitFromImage(uint8_t idx)
+uint8_t ReadBitFromImage(uint16_t idx)
 {
     return pgm_read_byte(&(image_data[idx]));
 }
@@ -197,7 +197,7 @@ uint8_t ReadNextBitFromImage(void)
     // Get Second half 11110000
     else
     {
-        return ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF0;
+        return (ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF0) >> 4;
     }
 }
 
@@ -318,10 +318,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         break;
     case READY:
         color_index = ReadNextBitFromImage();
-        if (color_index > 15)
-        {
-            color_index = color_index >> 4;
-        }
+
         new_color = colors_used[color_index];
 
         if (new_color != current_color)

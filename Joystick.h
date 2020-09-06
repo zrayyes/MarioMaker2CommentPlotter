@@ -119,7 +119,7 @@ void EVENT_USB_Device_ConfigurationChanged(void);
 void EVENT_USB_Device_ControlRequest(void);
 void ChangeColorIndex(void);
 void ReadHeader(void);
-uint8_t ReadBitFromImage(uint8_t index);
+uint8_t ReadBitFromImage(uint16_t index);
 uint8_t ReadNextBitFromImage(void);
 bool MoveColorRight(void);
 // Prepare the next report for the host.

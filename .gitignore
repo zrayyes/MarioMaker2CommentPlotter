@@ -10,3 +10,5 @@
 *.eep
 .vscode
 *.png
+*.exe
+*_test.*
