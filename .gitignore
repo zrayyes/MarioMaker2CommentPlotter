@@ -8,7 +8,6 @@
 *.map
 *.sym
 *.eep
-.vscode
 *.png
 *.exe
 *_test.*

@@ -1,0 +1,14 @@
+{
+    "files.exclude": {
+        "*.bin": true,
+        "*.eep": true,
+        "*.elf": true,
+        "*.hex": true,
+        "*.lss": true,
+        "*.map": true,
+        "*.sym": true,
+        "*.exe": true
+    },
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true
+}

@@ -1,6 +1,5 @@
 import sys
 import re
-import copy
 from PIL import Image
 
 COLORS = [
@@ -24,19 +23,6 @@ COLORS = [
 ]
 
 
-def get_color_by_value(i):
-    return COLORS[i][0]
-
-
-def hex_to_rgb(hex):
-    hex.lstrip('#')
-    return tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
-
-
-def get_color_from_list(n):
-    return hex_to_rgb(COLORS[n][1])
-
-
 def create_palette(colors):
     palette = []
     for _, c in colors:
@@ -53,17 +39,16 @@ def gen_palette_image(palette):
     return pal_image
 
 
-def split_len(seq, length):
-    return [seq[i:i+length] for i in range(0, len(seq), length)]
-
-
 class MyImage(object):
-    def __init__(self, image_file):
-        og = Image.open(image_file).convert("RGBA")
-        bg = Image.new("RGB", (320, 180), "WHITE")
-        bg.paste(og, mask=og.split()[3])
-        self.image = bg
+    def __init__(self):
+        self.image = None
         self.palette = gen_palette_image(create_palette(COLORS))
+
+    def open(self, image_file_location):
+        og = Image.open(image_file_location).convert("RGBA")
+        background = Image.new("RGB", (320, 180), "WHITE")
+        background.paste(og, mask=og.split()[3])
+        self.image = background
 
     def quantize(self, dither=False):
         self.image.load()
@@ -85,128 +70,65 @@ class MyImage(object):
                 for x in range(self.image.width)
                 for y in range(self.image.height)])
 
+    def save_to_c(self):
+        if len(COLORS) > 16:
+            raise BaseException("Too many colors selected")
 
-def compress_n(pixel_arr, n=1):
-    temp = []
-    repetition = 1
-    held_pixels = None
-    for d in range(0, len(pixel_arr), n):
-        pixels = pixel_arr[d:d+n]
-        if not temp:
-            temp.extend(pixels)
-            held_pixels = pixels
-        elif (held_pixels != pixels) or (repetition == 15):
-            temp.append(repetition)
-            temp.extend(pixels)
-            held_pixels = pixels
-            repetition = 1
-        else:
-            repetition += 1
-    # temp.extend(held_pixels)
-    temp.append(repetition)
-    return temp
+        pixel_arr = self.get_pixel_array()
 
+        # header
+        arr_length = 1 + len(COLORS) + 3
 
-def to_c(pixel_arr):
-    if len(COLORS) > 16:
-        raise BaseException("Too many colors selected")
+        # Each pixel uses half a byte
+        arr_length += len(pixel_arr) // 2
 
-    # header
-    array_length = 1 + len(COLORS) + 3
+        str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\n"
+        str_out += "const uint8_t image_data[%s] PROGMEM = {" % hex(arr_length)
 
-    # Each pixel uses half a byte
-    array_length += len(pixel_arr) // 2
-
-    str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\nconst uint8_t image_data[%s] PROGMEM = {" % hex(
-        array_length)
-
-    str_out += "0x0"
-    str_out += ","
-    str_out += "0xFF,"
-    for code, color in COLORS:
-        str_out += str(hex(code))
+        str_out += "0x0"
         str_out += ","
-    str_out += "0xFF,"
+        str_out += "0xFF,"
+        for code, color in COLORS:
+            str_out += str(hex(code))
+            str_out += ","
+        str_out += "0xFF,"
 
-    # Half bytes
-    left_half = None
-    right_half = None
-    for count,pixel in enumerate(pixel_arr,0):
-        if left_half is None:
-            left_half = pixel
-        elif right_half is None:
-            right_half = pixel
-            temp = (left_half << 4)
-            temp |= right_half
-            str_out += str(hex(temp)) + ","
-            left_half, right_half = None, None
+        # Half bytes
+        left_half = None
+        right_half = None
+        for count, pixel in enumerate(pixel_arr, 0):
+            if left_half is None:
+                left_half = pixel
+            elif right_half is None:
+                right_half = pixel
+                temp = (left_half << 4)
+                temp |= right_half
+                str_out += str(hex(temp)) + ","
+                left_half, right_half = None, None
 
-    # Odd number remains
-    if left_half:
-        str_out += str(hex(left_half)) + ","
+        # Odd number remains
+        if left_half:
+            str_out += str(hex(left_half)) + ","
 
-    str_out += "0xFF};\n"
+        str_out += "0xFF};\n"
 
-    with open("image.c", "w") as f:
-        f.write(str_out)
+        with open("image.c", "w") as f:
+            f.write(str_out)
 
-    # Replace Array size in Joystick.c
-    with open('Joystick.c', 'r') as file:
-        filedata = file.read()
+        # Replace Array size in Joystick.c
+        with open('Joystick.c', 'r') as file:
+            filedata = file.read()
 
-    filedata = re.sub(
-        r'(?<=image_data\[)(.*)(?=\] PROGMEM)', hex(array_length), filedata)
+        filedata = re.sub(
+            r'(?<=image_data\[)(.*)(?=\] PROGMEM)', hex(arr_length), filedata)
 
-    with open('Joystick.c', 'w') as file:
-        file.write(filedata)
-
-
-def uncompress(pixel_arr, img, size=1):
-    w = img.width
-    h = img.height
-    new_img = copy.copy(img)
-
-    index = 0
-    current_value = None
-    current_rep = 1
-
-    for col in range(0, h, size):
-        for row in range(0, w, size):
-            if (current_rep == 1) and (index != len(pixel_arr)):
-                current_value = pixel_arr[index]
-                current_rep = pixel_arr[index+1]
-                index += 2
-            else:
-                current_rep -= 1
-
-            for y in range(size):
-                for x in range(size):
-                    new_img.putpixel(
-                        (row+x, col+y), get_color_from_list(current_value))
-
-    return new_img
-
-
-def create_img_from_array(pixel_arr, img):
-    w = img.width
-    h = img.height
-    new_img = copy.copy(img)
-
-    for row in range(w):
-        for col in range(h):
-            new_img.putpixel(
-                (row, col), get_color_from_list(pixel_arr[(row*180) + col]))
-    return new_img
+        with open('Joystick.c', 'w') as file:
+            file.write(filedata)
 
 
 if __name__ == "__main__":
-    # TODO: Add two-color option option
-    my_img = MyImage(sys.argv[1])
+    my_img = MyImage()
+    my_img.open(sys.argv[1])
     my_img.quantize(len(sys.argv) > 2)
-
-    raw = my_img.get_pixel_array()
-    raw_size = (320*180)//2
-
-    to_c(raw)
-
+    my_img.save_to_c()
     my_img.save("preview.png")
