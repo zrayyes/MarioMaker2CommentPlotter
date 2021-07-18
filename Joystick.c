@@ -319,6 +319,7 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         state = READY;
         break;
     case READY:
+        ReportData->Button = SWITCH_A;
         color_index = ReadNextBitFromImage();
 
         new_color = colors_used[color_index];
@@ -327,15 +328,8 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         {
             state = SHIFT_COLOR;
         }
-        else if (paint_done == false)
-        {
-            paint_done = true;
-            state = PAINT;
-        }
-        // Move
         else
         {
-            paint_done = false;
             if (ypos < 179)
             {
                 state = MOVE_DOWN;
