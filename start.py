@@ -77,40 +77,40 @@ class MyImage(object):
         pixel_arr = self.get_pixel_array()
 
         # header
-        arr_length = 1 + len(COLORS) + 3
+        arr_split = len(pixel_arr) // 3
 
         # Each pixel uses half a byte
-        arr_length += len(pixel_arr) // 2
+        arr_length = arr_split // 2
 
         str_out = "#include <stdint.h>\n#include <avr/pgmspace.h>\n\n"
-        str_out += "const uint8_t image_data[%s] PROGMEM = {" % hex(arr_length)
-
-        str_out += "0x0"
-        str_out += ","
-        str_out += "0xFF,"
-        for code, color in COLORS:
+        str_out += f"const uint8_t colors[{hex(len(COLORS))}] PROGMEM = {{"
+        for code, _ in COLORS:
             str_out += str(hex(code))
             str_out += ","
-        str_out += "0xFF,"
 
-        # Half bytes
-        left_half = None
-        right_half = None
-        for count, pixel in enumerate(pixel_arr, 0):
-            if left_half is None:
-                left_half = pixel
-            elif right_half is None:
-                right_half = pixel
-                temp = (left_half << 4)
-                temp |= right_half
-                str_out += str(hex(temp)) + ","
-                left_half, right_half = None, None
+        str_out += "};\n\n"
 
-        # Odd number remains
-        if left_half:
-            str_out += str(hex(left_half)) + ","
+        for p in range(3):
+            str_out += f"const uint8_t image_data_{p+1}[{hex(arr_length)}] PROGMEM = {{"
 
-        str_out += "0xFF};\n"
+            # Half bytes
+            left_half = None
+            right_half = None
+            for _, pixel in enumerate(pixel_arr[p*arr_split:(p+1)*arr_split], 0):
+                if left_half is None:
+                    left_half = pixel
+                elif right_half is None:
+                    right_half = pixel
+                    temp = (left_half << 4)
+                    temp |= right_half
+                    str_out += str(hex(temp)) + ","
+                    left_half, right_half = None, None
+
+            # Odd number remains
+            if left_half:
+                str_out += str(hex(left_half))
+
+            str_out += "};\n\n"
 
         with open("image.c", "w") as f:
             f.write(str_out)

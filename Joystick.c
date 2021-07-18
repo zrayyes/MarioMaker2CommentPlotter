@@ -26,7 +26,10 @@ these buttons for our use.
 
 #include "Joystick.h"
 
-extern const uint8_t image_data[0x7094] PROGMEM;
+extern const uint8_t colors[0x10] PROGMEM;
+extern const uint8_t image_data_1[0x2580] PROGMEM;
+extern const uint8_t image_data_2[0x2580] PROGMEM;
+extern const uint8_t image_data_3[0x2580] PROGMEM;
 
 // Main entry point.
 int main(void)
@@ -184,7 +187,18 @@ char shift_color = 'd';
 
 uint8_t ReadBitFromImage(uint16_t idx)
 {
-    return pgm_read_byte(&(image_data[idx]));
+    if (idx < 9600)
+    {
+        return pgm_read_byte(&(image_data_1[idx]));
+    }
+    else if (idx < 19200)
+    {
+        return pgm_read_byte(&(image_data_2[idx - 9600]));
+    }
+    else
+    {
+        return pgm_read_byte(&(image_data_3[idx - 19200]));
+    }
 }
 
 uint8_t ReadNextBitFromImage(void)
@@ -203,27 +217,15 @@ uint8_t ReadNextBitFromImage(void)
 
 void ReadHeader(void)
 {
-    // First byte = 1 if compressed else 0
-    // EMPTY LINE = 0xFF
-    // ...COLORS, 1 byte each
-    // EMPTY LINE = 0xFF
     uint8_t color_count = 0;
-    bool stop = false;
-    uint8_t temp = 0;
-    while (!stop)
+    uint8_t temp = pgm_read_byte(&(colors[color_count]));
+    while (temp != '\0')
     {
-        temp = ReadBitFromImage(color_count + 2);
-        if (temp == 0xff)
-        {
-            stop = true;
-        }
-        else
-        {
-            colors_used[color_count] = temp;
-            color_count++;
-        }
+        colors_used[color_count] = temp;
+        color_count++;
+        temp = pgm_read_byte(&(colors[color_count]));
     }
-    header_length = 2 + color_count + 1;
+    header_length = color_count;
 }
 
 void ChangeColorIndex(void)

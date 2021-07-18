@@ -55,7 +55,18 @@ char shift_color = 'd';
 
 uint8_t ReadBitFromImage(uint16_t idx)
 {
-    return image_data[idx];
+    if (idx < 9600)
+    {
+        return image_data_1[idx];
+    }
+    else if (idx < 19200)
+    {
+        return image_data_2[idx - 9600];
+    }
+    else
+    {
+        return image_data_3[idx - 19200];
+    }
 }
 
 uint8_t ReadNextBitFromImage(void)
@@ -63,38 +74,26 @@ uint8_t ReadNextBitFromImage(void)
     // Get First half 00001111
     if ((ypos + (xpos * 180)) % 2)
     {
-        return ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF;
+        return ReadBitFromImage((ypos + (xpos * 180)) / 2) & 0xF;
     }
     // Get Second half 11110000
     else
     {
-        return (ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF0) >> 4;
+        return (ReadBitFromImage((ypos + (xpos * 180)) / 2) & 0xF0) >> 4;
     }
 }
 
 void ReadHeader(void)
 {
-    // First byte = 1 if compressed else 0
-    // EMPTY LINE = 0xFF
-    // ...COLORS, 1 byte each
-    // EMPTY LINE = 0xFF
     uint8_t color_count = 0;
-    bool stop = false;
-    uint8_t temp = 0;
-    while (!stop)
+    uint8_t temp = colors[color_count];
+    while (temp != '\0')
     {
-        temp = ReadBitFromImage(color_count + 2);
-        if (temp == 0xff)
-        {
-            stop = true;
-        }
-        else
-        {
-            colors_used[color_count] = temp;
-            color_count++;
-        }
+        colors_used[color_count] = temp;
+        color_count++;
+        temp = colors[color_count];
     }
-    header_length = 2 + color_count + 1;
+    header_length = color_count;
 }
 
 void ChangeColorIndex(void)
@@ -198,12 +197,12 @@ void GetNextReport(USB_JoystickReport_Input_t *const ReportData)
         else if (paint_done == false)
         {
             // TESTING AREA
-            if (color_index != 14 && color_index != 15)
+            if (color_index != 14)
             {
-                printf("[X:%d,Y:%d] IDX:%d, colorIDX: %d, New color: %d\n", xpos, ypos, (ypos + xpos * 180), color_index, new_color);
+                printf("[X:%d,Y:%d] IDX:%d, colorIDX: %d, New color: %d\n", xpos, ypos, (ypos + (xpos * 180)), color_index, new_color);
 
-                printf("R=1: %d\n", (ypos + (xpos * 180)) % 2);
-                printf("Byte: %d\n", ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2));
+                // printf("R=1: %d\n", (ypos + (xpos * 180)) % 2);
+                // printf("Byte: %d\n", ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2));
                 // printf("Right: %d\n", ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF);
                 // printf("Left: %d\n", (ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF) >> 4);
                 // exit(1);
