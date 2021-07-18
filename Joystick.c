@@ -206,12 +206,12 @@ uint8_t ReadNextBitFromImage(void)
     // Get First half 00001111
     if ((ypos + (xpos * 180)) % 2)
     {
-        return ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF;
+        return ReadBitFromImage((ypos + (xpos * 180)) / 2) & 0xF;
     }
     // Get Second half 11110000
     else
     {
-        return (ReadBitFromImage(header_length + (ypos + (xpos * 180)) / 2) & 0xF0) >> 4;
+        return (ReadBitFromImage((ypos + (xpos * 180)) / 2) & 0xF0) >> 4;
     }
 }
 
